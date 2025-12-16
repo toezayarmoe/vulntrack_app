@@ -1,6 +1,5 @@
 class Env {
-  static const baseURL = String.fromEnvironment(
-    'BASE_URL',
-    defaultValue: 'http://localhost:9000/api',
-  );
+  static const url = "http://localhost:8080";
+  static const login = "$url/auth/login";
+  static const profile = "$url/api/profile";
 }

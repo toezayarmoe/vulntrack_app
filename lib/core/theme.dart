@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-final String url = "http://localhost:5000";
-
 final InputDecorationTheme appInputDecorationTheme = InputDecorationTheme(
   border: OutlineInputBorder(
     borderRadius: BorderRadius.circular(8.0),
