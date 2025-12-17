@@ -9,7 +9,11 @@ import 'package:vulntrack_app/utils/pref_helper.dart';
 
 class HomeController extends GetxController {
   var isLoading = false.obs;
-  var tokenStatus = "".obs;
+  var critical = 0.obs;
+  var high = 0.obs;
+  var medium = 0.obs;
+  var low = 0.obs;
+  var info = 0.obs;
 
   @override
   void onInit() {
@@ -25,7 +29,10 @@ class HomeController extends GetxController {
       final res = await req.getDataWithAuth();
       if (res.statusCode == 200) {
         var resBody = jsonDecode(res.body);
-        tokenStatus.value = resBody["message"];
+        critical.value = resBody["critical"];
+        high.value = resBody["high"];
+        medium.value = resBody["medium"];
+        low.value = resBody["low"];
       }
     } catch (e) {
       debugPrint(e.toString());
