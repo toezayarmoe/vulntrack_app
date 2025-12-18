@@ -3,29 +3,31 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:vulntrack_app/config/environment.dart';
-import 'package:vulntrack_app/screen/login_page.dart';
+import 'package:vulntrack_app/models/env_severity.dart';
 import 'package:vulntrack_app/services/networking.dart';
 import 'package:vulntrack_app/utils/pref_helper.dart';
 
 class HomeController extends GetxController {
   var isLoading = false.obs;
+  var isLoadingEnv = false.obs;
   var critical = 0.obs;
   var high = 0.obs;
   var medium = 0.obs;
   var low = 0.obs;
   var info = 0.obs;
+  final Rxn<EnvSeverity> envdata = Rxn<EnvSeverity>();
 
   @override
   void onInit() {
     super.onInit();
-    validateToken();
+    fetchGlobalSummary();
+    fetchSummaryPerEnv();
   }
 
-  Future<void> validateToken() async {
+  Future<void> fetchGlobalSummary() async {
     try {
-      debugPrint("Got Here");
       isLoading.value = true;
-      final req = NetworkHelper(Uri.parse(Env.profile));
+      final req = NetworkHelper(Uri.parse(Env.globalsummary));
       final res = await req.getDataWithAuth();
       if (res.statusCode == 200) {
         var resBody = jsonDecode(res.body);
@@ -33,11 +35,30 @@ class HomeController extends GetxController {
         high.value = resBody["high"];
         medium.value = resBody["medium"];
         low.value = resBody["low"];
+        info.value = resBody["info"];
       }
     } catch (e) {
       debugPrint(e.toString());
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> fetchSummaryPerEnv() async {
+    try {
+      debugPrint("Fetching Summary Per Environment");
+      isLoadingEnv.value = true;
+      final req = NetworkHelper(Uri.parse(Env.summaryperenv));
+      final res = await req.getDataWithAuth();
+      if (res.statusCode == 200) {
+        Map<String, dynamic> userMap = jsonDecode(res.body);
+        EnvSeverity response = EnvSeverity.fromJson(userMap);
+        envdata.value = response;
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+    } finally {
+      isLoadingEnv.value = false;
     }
   }
 
@@ -52,6 +73,6 @@ class HomeController extends GetxController {
     }
 
     // Navigate to Login
-    Get.offAll(() => LoginPage());
+    Get.offAllNamed('/login');
   }
 }

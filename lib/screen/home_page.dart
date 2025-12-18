@@ -1,15 +1,15 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:vulntrack_app/controllers/home_controller.dart';
+import 'package:vulntrack_app/models/severity_model.dart';
+import 'package:vulntrack_app/widget/piechart_widget.dart';
 
-class HomeScreen extends StatelessWidget {
-  HomeScreen({super.key});
-
-  final HomeController controller = Get.put(HomeController());
+class HomeScreen extends GetView<HomeController> {
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("token");
     return Scaffold(
       appBar: AppBar(
         title: const Text('VulnTrack Dashboard'),
@@ -20,108 +20,140 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Responsive logic: 3 columns if width > 600, else 1
+          int crossAxisCount = constraints.maxWidth > 1300
+              ? 5
+              : constraints.maxWidth > 800
+              ? 3
+              : 1;
+          // Adjust aspect ratio so charts aren't too squashed
+          double aspectRatio = constraints.maxWidth > 1300
+              ? 0.85
+              : constraints.maxWidth > 800
+              ? 1 / 1
+              : 1 / 0.8;
 
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+          return ListView(
+            padding: const EdgeInsets.all(16),
             children: [
+              // --- SECTION 1: GLOBAL SUMMARY (TOP) ---
               const Text(
                 "Global Vulnerability Severity",
+                textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-              SizedBox(
-                height: 260,
-                child: _SeverityPieChart(controller: controller),
+
+              Obx(() {
+                if (controller.isLoading.value) {
+                  return const SizedBox(
+                    height: 260,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                return SizedBox(
+                  height: 260,
+                  child: SeverityPieChart(
+                    SeverityModel(
+                      controller.critical.value,
+                      controller.high.value,
+                      controller.medium.value,
+                      controller.low.value,
+                      controller.info.value,
+                    ),
+                  ),
+                );
+              }),
+
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Divider(thickness: 1.5),
               ),
+
+              // --- SECTION 2: ENVIRONMENT BREAKDOWN (GRID) ---
+              const Text(
+                "Environment Breakdown",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+
+              Obx(() {
+                // Independent loader for breakdown section
+                if (controller.isLoadingEnv.value) {
+                  return const SizedBox(
+                    height: 200,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                // Null check for the list
+                if (controller.envdata.value == null ||
+                    controller.envdata.value!.data.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Text("No environment data available"),
+                    ),
+                  );
+                }
+
+                return GridView.builder(
+                  shrinkWrap: true, // Allows GridView to live inside a ListView
+                  physics:
+                      const NeverScrollableScrollPhysics(), // ListView handles scroll
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: aspectRatio,
+                  ),
+                  itemCount: controller.envdata.value!.data.length,
+                  itemBuilder: (context, index) {
+                    // Correctly access the individual environment data
+                    final env = controller.envdata.value!.data[index];
+
+                    return Card(
+                      elevation: 3,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          children: [
+                            Text(
+                              env.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const Divider(),
+                            Expanded(
+                              child: SeverityPieChart(
+                                SeverityModel(
+                                  env.critical, // Accessed from 'env' variable
+                                  env.high, // This fixes your undefined_getter error
+                                  env.medium,
+                                  env.low,
+                                  0,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }),
             ],
-          ),
-        );
-      }),
-    );
-  }
-}
-
-/* ---------------- PIE CHART (INLINE) ---------------- */
-
-class _SeverityPieChart extends StatefulWidget {
-  final HomeController controller;
-
-  const _SeverityPieChart({required this.controller});
-
-  @override
-  State<_SeverityPieChart> createState() => _SeverityPieChartState();
-}
-
-class _SeverityPieChartState extends State<_SeverityPieChart> {
-  int touchedIndex = -1;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = widget.controller;
-
-    final total =
-        c.critical.value +
-        c.high.value +
-        c.medium.value +
-        c.low.value +
-        c.info.value;
-
-    if (total == 0) {
-      return const Center(child: Text("No vulnerability data"));
-    }
-
-    return PieChart(
-      PieChartData(
-        pieTouchData: PieTouchData(
-          touchCallback: (event, response) {
-            setState(() {
-              touchedIndex =
-                  response?.touchedSection?.touchedSectionIndex ?? -1;
-            });
-          },
-        ),
-        borderData: FlBorderData(show: false),
-        sectionsSpace: 2,
-        centerSpaceRadius: 40,
-        sections: _sections(c, total),
-      ),
-    );
-  }
-
-  List<PieChartSectionData> _sections(HomeController c, int total) {
-    return [
-      _section(0, c.critical.value, Colors.red, total, "Critical"),
-      _section(1, c.high.value, Colors.orange, total, "High"),
-      _section(2, c.medium.value, Colors.yellow.shade700, total, "Medium"),
-      _section(3, c.low.value, Colors.green, total, "Low"),
-      _section(4, c.info.value, Colors.blueGrey, total, "Info"),
-    ];
-  }
-
-  PieChartSectionData _section(
-    int index,
-    int value,
-    Color color,
-    int total,
-    String label,
-  ) {
-    final isTouched = index == touchedIndex;
-    final percentage = ((value / total) * 100).toStringAsFixed(1);
-
-    return PieChartSectionData(
-      color: color,
-      value: value.toDouble(),
-      radius: isTouched ? 70 : 60,
-      title: "$label\n$percentage%",
-      titleStyle: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
+          );
+        },
       ),
     );
   }

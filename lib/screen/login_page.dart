@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:vulntrack_app/controllers/login_controller.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends GetView<LoginController> {
   const LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(LoginController());
     return Scaffold(
       body: Center(
         child: ConstrainedBox(

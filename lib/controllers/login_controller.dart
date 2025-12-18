@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
 import 'package:get/state_manager.dart';
 import 'package:vulntrack_app/config/environment.dart';
-import 'package:vulntrack_app/screen/home_page.dart';
 import 'package:vulntrack_app/services/networking.dart';
 import 'package:vulntrack_app/utils/pref_helper.dart';
 
@@ -45,7 +44,7 @@ class LoginController extends GetxController {
         await Preferences.setString("token", responseBody['token']);
         usernameController.clear();
         passwordController.clear();
-        Get.offAll(() => HomeScreen());
+        Get.offAllNamed('/home');
       } else if (response.statusCode == 401) {
         final errorData = jsonDecode(response.body);
         errorMessage.value =
