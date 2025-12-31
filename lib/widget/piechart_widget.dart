@@ -4,8 +4,9 @@ import 'package:vulntrack_app/models/severity_model.dart';
 
 class SeverityPieChart extends StatefulWidget {
   final SeverityModel data;
+  final bool isCompact;
 
-  const SeverityPieChart(this.data, {super.key});
+  const SeverityPieChart(this.data, {super.key, this.isCompact = false});
 
   @override
   State<SeverityPieChart> createState() => _SeverityPieChartState();
@@ -16,34 +17,28 @@ class _SeverityPieChartState extends State<SeverityPieChart> {
 
   @override
   Widget build(BuildContext context) {
-    final c = widget.data;
-    final total = c.critical + c.high + c.medium + c.low + c.info;
+    final int total =
+        widget.data.critical +
+        widget.data.high +
+        widget.data.medium +
+        widget.data.low +
+        widget.data.info;
 
     if (total == 0) {
-      return const Center(child: Text("No vulnerability data"));
+      return Center(
+        child: Text("No Data", style: TextStyle(color: Colors.grey[400])),
+      );
     }
 
-    return AspectRatio(
-      aspectRatio: 1.3,
-      child: Column(
-        children: <Widget>[
-          const SizedBox(height: 18),
-          // Row of Indicators (Legend)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              _buildIndicator(0, Colors.red, "Crit"),
-              _buildIndicator(1, Colors.orange, "High"),
-              _buildIndicator(2, Colors.yellow.shade700, "Med"),
-              _buildIndicator(3, Colors.green, "Low"),
-              _buildIndicator(4, Colors.blueGrey, "Info"),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Expanded(
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: PieChart(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 1. THE CHART
+        Expanded(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
                 PieChartData(
                   pieTouchData: PieTouchData(
                     touchCallback: (FlTouchEvent event, pieTouchResponse) {
@@ -60,83 +55,174 @@ class _SeverityPieChartState extends State<SeverityPieChart> {
                       });
                     },
                   ),
-                  startDegreeOffset: 180,
                   borderData: FlBorderData(show: false),
-                  sectionsSpace: 1,
-                  centerSpaceRadius:
-                      0, // Set to 0 for a solid Pie, or 40 for Donut
-                  sections: _showingSections(c, total),
+                  sectionsSpace: 2,
+                  // INCREASED: Made the center hole bigger (35 for compact, 60 for full)
+                  centerSpaceRadius: widget.isCompact ? 35 : 60,
+                  sections: _buildSections(total),
                 ),
+                swapAnimationDuration: const Duration(milliseconds: 300),
+                swapAnimationCurve: Curves.easeInOut,
               ),
-            ),
+
+              // 2. CENTER TEXT
+              _buildCenterText(total),
+            ],
+          ),
+        ),
+
+        // 3. LEGEND
+        if (!widget.isCompact) ...[
+          const SizedBox(height: 20),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _LegendItem(
+                "Crit",
+                const Color(0xFFEF5350),
+                widget.data.critical,
+              ),
+              _LegendItem("High", const Color(0xFFFFA726), widget.data.high),
+              _LegendItem("Med", const Color(0xFFFFEE58), widget.data.medium),
+              _LegendItem("Low", const Color(0xFF66BB6A), widget.data.low),
+            ],
           ),
         ],
-      ),
+      ],
     );
   }
 
-  // Helper to build the legend indicators
-  Widget _buildIndicator(int index, Color color, String text) {
-    final isSelected = touchedIndex == index;
-    return Row(
+  Widget _buildCenterText(int total) {
+    String label = "Total";
+    String value = "$total";
+    Color color = Colors.blueGrey[800]!;
+
+    if (touchedIndex != -1) {
+      switch (touchedIndex) {
+        case 0:
+          label = "Critical";
+          value = "${widget.data.critical}";
+          color = const Color(0xFFEF5350);
+          break;
+        case 1:
+          label = "High";
+          value = "${widget.data.high}";
+          color = const Color(0xFFFFA726);
+          break;
+        case 2:
+          label = "Medium";
+          value = "${widget.data.medium}";
+          color = const Color(0xFFFFEE58);
+          break;
+        case 3:
+          label = "Low";
+          value = "${widget.data.low}";
+          color = const Color(0xFF66BB6A);
+          break;
+        case 4:
+          label = "Info";
+          value = "${widget.data.info}";
+          color = const Color(0xFF90A4AE);
+          break;
+      }
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: isSelected ? 16 : 12,
-          height: isSelected ? 16 : 12,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-        ),
-        const SizedBox(width: 4),
         Text(
-          text,
+          value,
           style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? Colors.black : Colors.grey.shade600,
+            fontSize: widget.isCompact
+                ? 20
+                : 32, // Increased font size slightly
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: widget.isCompact ? 10 : 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[600],
           ),
         ),
       ],
     );
   }
 
-  List<PieChartSectionData> _showingSections(SeverityModel c, int total) {
+  List<PieChartSectionData> _buildSections(int total) {
     return List.generate(5, (i) {
       final isTouched = i == touchedIndex;
-      final double radius = isTouched ? 85 : 75;
 
-      // Define data per index
-      final data = switch (i) {
-        0 => (
-          color: Colors.red,
-          value: c.critical.toDouble(),
-          label: "Critical",
-        ),
-        1 => (color: Colors.orange, value: c.high.toDouble(), label: "High"),
-        2 => (
-          color: Colors.yellow.shade700,
-          value: c.medium.toDouble(),
-          label: "Med",
-        ),
-        3 => (color: Colors.green, value: c.low.toDouble(), label: "Low"),
-        4 => (color: Colors.blueGrey, value: c.info.toDouble(), label: "Info"),
-        _ => throw StateError('Invalid index'),
-      };
+      // INCREASED: Made the ring slightly thicker
+      // Compact: 20 (touched) / 15 (normal) -> 25 / 18
+      // Full: 30 (touched) / 25 (normal) -> 35 / 28
+      final double radius = isTouched
+          ? (widget.isCompact ? 25 : 35)
+          : (widget.isCompact ? 18 : 28);
 
-      return PieChartSectionData(
-        color: data.color,
-        value: data.value,
-        title: isTouched
-            ? '${data.label}\n${((data.value / total) * 100).toStringAsFixed(0)}%'
-            : '',
-        radius: radius,
-        titleStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-        borderSide: isTouched
-            ? const BorderSide(color: Colors.white, width: 4)
-            : BorderSide(color: Colors.white),
-      );
+      switch (i) {
+        case 0:
+          return _section(
+            widget.data.critical,
+            const Color(0xFFEF5350),
+            radius,
+          );
+        case 1:
+          return _section(widget.data.high, const Color(0xFFFFA726), radius);
+        case 2:
+          return _section(widget.data.medium, const Color(0xFFFFEE58), radius);
+        case 3:
+          return _section(widget.data.low, const Color(0xFF66BB6A), radius);
+        case 4:
+          return _section(widget.data.info, const Color(0xFF90A4AE), radius);
+        default:
+          throw Error();
+      }
     });
+  }
+
+  PieChartSectionData _section(int value, Color color, double radius) {
+    return PieChartSectionData(
+      color: color,
+      value: value.toDouble(),
+      title: '',
+      radius: radius,
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final String label;
+  final Color color;
+  final int value;
+
+  const _LegendItem(this.label, this.color, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          "$label ($value)",
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[700],
+          ),
+        ),
+      ],
+    );
   }
 }
