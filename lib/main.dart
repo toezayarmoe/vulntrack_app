@@ -3,8 +3,9 @@ import 'package:get/get.dart';
 import 'package:vulntrack_app/controllers/home_controller.dart';
 import 'package:vulntrack_app/controllers/login_controller.dart';
 import 'package:vulntrack_app/core/theme.dart';
-import 'package:vulntrack_app/screen/home_page.dart';
+import 'package:vulntrack_app/screen/home/home_screen.dart';
 import 'package:vulntrack_app/screen/login_page.dart';
+import 'package:vulntrack_app/screen/report_page.dart';
 import 'package:vulntrack_app/utils/pref_helper.dart';
 
 void main() async {
@@ -29,6 +30,7 @@ void main() async {
       getPages: [
         GetPage(name: '/home', page: () => HomeScreen()),
         GetPage(name: '/login', page: () => LoginPage()),
+        GetPage(name: '/report', page: () => ReportsPage()),
       ],
       title: "Vulnerability Management System",
     ),

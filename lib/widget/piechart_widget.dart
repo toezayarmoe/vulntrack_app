@@ -33,7 +33,6 @@ class _SeverityPieChartState extends State<SeverityPieChart> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 1. THE CHART
         Expanded(
           child: Stack(
             alignment: Alignment.center,
@@ -57,27 +56,22 @@ class _SeverityPieChartState extends State<SeverityPieChart> {
                   ),
                   borderData: FlBorderData(show: false),
                   sectionsSpace: 2,
-                  // INCREASED: Made the center hole bigger (35 for compact, 60 for full)
-                  centerSpaceRadius: widget.isCompact ? 35 : 60,
+                  centerSpaceRadius: widget.isCompact ? 30 : 50,
                   sections: _buildSections(total),
                 ),
-                swapAnimationDuration: const Duration(milliseconds: 300),
-                swapAnimationCurve: Curves.easeInOut,
+                // FIXED: API Updated in latest fl_chart
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
               ),
-
-              // 2. CENTER TEXT
               _buildCenterText(total),
             ],
           ),
         ),
-
-        // 3. LEGEND
         if (!widget.isCompact) ...[
           const SizedBox(height: 20),
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 16,
-            runSpacing: 8,
             children: [
               _LegendItem(
                 "Crit",
@@ -135,9 +129,7 @@ class _SeverityPieChartState extends State<SeverityPieChart> {
         Text(
           value,
           style: TextStyle(
-            fontSize: widget.isCompact
-                ? 20
-                : 32, // Increased font size slightly
+            fontSize: widget.isCompact ? 20 : 32,
             fontWeight: FontWeight.bold,
             color: color,
           ),
@@ -145,7 +137,7 @@ class _SeverityPieChartState extends State<SeverityPieChart> {
         Text(
           label,
           style: TextStyle(
-            fontSize: widget.isCompact ? 10 : 12,
+            fontSize: 10,
             fontWeight: FontWeight.w500,
             color: Colors.grey[600],
           ),
@@ -157,14 +149,9 @@ class _SeverityPieChartState extends State<SeverityPieChart> {
   List<PieChartSectionData> _buildSections(int total) {
     return List.generate(5, (i) {
       final isTouched = i == touchedIndex;
-
-      // INCREASED: Made the ring slightly thicker
-      // Compact: 20 (touched) / 15 (normal) -> 25 / 18
-      // Full: 30 (touched) / 25 (normal) -> 35 / 28
       final double radius = isTouched
           ? (widget.isCompact ? 25 : 35)
           : (widget.isCompact ? 18 : 28);
-
       switch (i) {
         case 0:
           return _section(
@@ -200,9 +187,7 @@ class _LegendItem extends StatelessWidget {
   final String label;
   final Color color;
   final int value;
-
   const _LegendItem(this.label, this.color, this.value);
-
   @override
   Widget build(BuildContext context) {
     return Row(
